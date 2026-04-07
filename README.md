@@ -14,6 +14,7 @@
 | **Email Verification** | Token-based email verification sent via SMTP (Gmail, Outlook, etc.) |
 | **Superuser Approval** | Superusers approve, disable, or delete user accounts |
 | **Role-Based Access** | `viewer`, `creator`, `superuser` with fine-grained permissions |
+| **SSO Integration** | Single sign-on with any Laravel app — token passthrough, auto user provisioning |
 | **Audit Logging** | Full audit trail of all user and admin actions |
 | **Fluid Theme** | Glassmorphism UI with animated gradients and nebula effects |
 
@@ -59,6 +60,76 @@ npm run dev
 | `viewer` | `viewer123` | Viewer |
 
 > Default accounts are seeded automatically on first run and marked as `active` (no email verification required).
+
+---
+
+## 🔗 Laravel SSO Integration
+
+Otenga can be unified with any Laravel application that issues JWTs, giving users a single login across both systems.
+
+### How it works
+
+```
+User logs in to Laravel app
+        ↓
+Laravel redirects to:  https://<otenga>/sso?token=<laravel_jwt>
+        ↓
+Otenga validates the token using the shared secret
+        ↓
+User is auto-provisioned in BI_Otenga (first visit) or looked up by email
+        ↓
+Otenga issues its own session token — user lands on the dashboard
+```
+
+### Setup
+
+**1. Configure `.env` on the Otenga backend:**
+
+```env
+# Must match jwt.secret (or APP_KEY) in the Laravel app's .env
+LARAVEL_JWT_SECRET=your_laravel_jwt_secret_here
+
+# URL on the Laravel side that triggers login and redirects back to Otenga
+# Laravel should append ?token=<jwt> to the return_to value it receives
+LARAVEL_APP_URL=https://app.aleza.co.ke/auth/sso-redirect
+```
+
+**2. Configure the Laravel app** to redirect to Otenga after authentication:
+
+```php
+// In your Laravel SSO controller
+$token = auth()->user()->createToken(); // using tymon/jwt-auth or similar
+return redirect("https://<otenga_url>/sso?token={$token}");
+```
+
+**3. Restart the backend.** The "Continue with Company App" button appears on the Otenga login page automatically when `LARAVEL_JWT_SECRET` is set.
+
+### Expected JWT claims
+
+The Laravel token should include at minimum:
+
+| Claim | Description |
+|---|---|
+| `email` | User's email address (used as the unique identifier) |
+| `name` | Full name |
+| `phone_number` or `phone` | Phone number |
+| `role` or `roles` | Role string or array |
+
+### Role mapping
+
+| Laravel role | Otenga role |
+|---|---|
+| `admin`, `superadmin`, `administrator` | `superuser` |
+| `creator`, `analyst`, `data_analyst`, `manager`, `editor`, `staff` | `creator` |
+| anything else / missing | `viewer` |
+
+> Roles can be overridden per-user by a superuser inside Otenga after the first SSO login.
+
+### SSO user accounts
+
+- First-time SSO users are created with status `active` — no email verification or approval step is required (they are already vetted by the Laravel app).
+- If a user previously registered manually via the Otenga form, their first SSO login will automatically activate the account.
+- Users provisioned via SSO have a randomly-generated unusable password; they must always log in through the SSO flow.
 
 ---
 
@@ -132,17 +203,17 @@ Superuser approves → account active, user can sign in
 ```
 otenga/
 ├── backend/
-│   ├── .env                          # SMTP & DB credentials (create from template)
+│   ├── .env                          # SMTP, DB & SSO credentials (create from template)
 │   └── app/
 │       ├── main.py                   # FastAPI app + startup migrations
-│       ├── config.py                 # Settings (BI_DB + Data_Science + SMTP)
+│       ├── config.py                 # Settings (BI_DB + Data_Science + SMTP + SSO)
 │       ├── models.py                 # SQLAlchemy models (MySQL — BI_Otenga)
 │       ├── auth.py                   # JWT authentication + role guards
 │       ├── database.py               # MySQL engine (auto-creates BI_Otenga schema)
 │       ├── email_service.py          # SMTP email sender with console fallback
 │       ├── execution_engine.py       # SQL + Python sandbox execution
 │       └── routers/
-│           ├── auth_router.py        # Login, register, verify-email, resend
+│           ├── auth_router.py        # Login, register, verify-email, resend, SSO
 │           ├── users.py              # User CRUD + approve/disable/verify
 │           ├── notebooks.py          # Notebook CRUD
 │           ├── dashboards.py         # Dashboard CRUD
@@ -152,15 +223,16 @@ otenga/
     └── src/
         ├── components/
         │   ├── layout/               # Sidebar, TopBar (portal dropdowns), Layout
-        │   ├── auth/                 # Login + Register tabs
+        │   ├── auth/                 # Login + Register + SSO button
         │   ├── editor/               # Notebook + Cell + ResultViewer
         │   ├── dashboard/            # Dashboard builder + widget config
         │   └── charts/               # Plotly chart renderer
         ├── pages/
         │   ├── VerifyEmailPage.jsx   # Email verification landing page
+        │   ├── SSOCallbackPage.jsx   # Laravel SSO redirect handler
         │   ├── UsersPage.jsx         # User management (unverified / pending / members)
         │   └── ...                   # HomePage, EditorPage, DashboardPage, etc.
-        ├── store/                    # Zustand (authStore, notebookStore, etc.)
+        ├── store/                    # Zustand (authStore — includes loginWithSSOToken)
         └── api/                      # Axios client + typed API helpers
 ```
 
@@ -214,6 +286,8 @@ Base URL: `http://localhost:8000/api/v1`
 | GET | `/auth/verify-email?token=` | Verify email from link | No |
 | POST | `/auth/resend-verification?email=` | Resend verification email | No |
 | GET | `/auth/me` | Current user info | Yes |
+| POST | `/auth/sso` | Exchange Laravel JWT for Otenga session | No |
+| GET | `/auth/sso/config` | Check whether SSO is enabled | No |
 
 ### Users *(superuser only)*
 | Method | Path | Description |

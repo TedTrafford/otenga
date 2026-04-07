@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, EyeOff, Zap, ArrowRight, Database, BarChart3, Code2, UserPlus, LogIn, CheckCircle2, Mail, MailOpen } from 'lucide-react'
+import { Eye, EyeOff, Zap, ArrowRight, Database, BarChart3, Code2, UserPlus, LogIn, Mail, MailOpen, ExternalLink } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import client from '../../api/client'
 import toast from 'react-hot-toast'
@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [registered, setRegistered] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [resending, setResending]   = useState(false)
+  const [ssoConfig, setSsoConfig]   = useState(null) // { enabled, laravel_app_url }
 
   // login fields
   const [loginForm, setLoginForm] = useState({ username: '', password: '' })
@@ -39,6 +40,20 @@ export default function LoginPage() {
   useEffect(() => {
     if (isAuthenticated) navigate('/', { replace: true })
   }, [isAuthenticated, navigate])
+
+  // Fetch SSO availability once on mount
+  useEffect(() => {
+    client.get('/auth/sso/config')
+      .then(({ data }) => setSsoConfig(data))
+      .catch(() => setSsoConfig({ enabled: false, laravel_app_url: null }))
+  }, [])
+
+  const handleSSORedirect = () => {
+    if (!ssoConfig?.laravel_app_url) return
+    // Tell the Laravel app where to send the user back after login
+    const returnTo = encodeURIComponent(`${window.location.origin}/sso`)
+    window.location.href = `${ssoConfig.laravel_app_url}?return_to=${returnTo}`
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -214,6 +229,27 @@ export default function LoginPage() {
                         )}
                       </button>
                     </form>
+
+                    {/* SSO divider — only rendered when SSO is configured */}
+                    {ssoConfig?.enabled && (
+                      <>
+                        <div className="flex items-center gap-3 my-5">
+                          <div className="flex-1 h-px bg-white/[0.07]" />
+                          <span className="text-xs text-slate-600">or</span>
+                          <div className="flex-1 h-px bg-white/[0.07]" />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleSSORedirect}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-slate-300 transition-all duration-200 hover:text-slate-100"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        >
+                          <ExternalLink size={14} className="text-primary" />
+                          Continue with Company App
+                        </button>
+                      </>
+                    )}
 
                     <p className="text-xs text-slate-600 text-center mt-6">
                       Don't have an account?{' '}

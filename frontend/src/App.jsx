@@ -10,7 +10,8 @@ import ReportsPage     from './pages/ReportsPage'
 import SettingsPage    from './pages/SettingsPage'
 import UsersPage       from './pages/UsersPage'
 import DataPage        from './pages/DataPage'
-import VerifyEmailPage from './pages/VerifyEmailPage'
+import VerifyEmailPage  from './pages/VerifyEmailPage'
+import SSOCallbackPage  from './pages/SSOCallbackPage'
 
 function PrivateRoute({ children, roles }) {
   const { isAuthenticated, user } = useAuthStore()
@@ -24,6 +25,7 @@ export default function App() {
     <Routes>
       <Route path="/login"        element={<LoginPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/sso"          element={<SSOCallbackPage />} />
 
       <Route path="/" element={
         <PrivateRoute>

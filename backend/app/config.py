@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     # The base URL the frontend is served at (used to build verification links)
     APP_BASE_URL: str = os.environ.get("APP_BASE_URL", "http://localhost:5173")
 
+    # ── Laravel SSO integration ───────────────────────────────────────────────
+    # Must match APP_KEY (or jwt.secret) from the Laravel app's .env
+    LARAVEL_JWT_SECRET: str = os.environ.get("LARAVEL_JWT_SECRET", "")
+    # Full URL users are sent to when they click "Login with Company App"
+    # e.g. https://app.aleza.co.ke/sso/redirect?return_to=<otenga_url>
+    LARAVEL_APP_URL: str = os.environ.get("LARAVEL_APP_URL", "")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
