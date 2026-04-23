@@ -53,6 +53,24 @@ def _serialize_result(obj: Any) -> Dict[str, Any]:
     return {"type": "text", "data": str(obj)}
 
 
+def _strip_numeric_commas(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove commas from string columns whose values are numeric when commas are stripped.
+
+    This cleans data like phone numbers stored as '0722,123,456' or credit limits
+    stored as '50,000.00' without touching columns that contain real textual commas
+    (e.g. 'John, Smith' or 'Nairobi, Kenya').
+    """
+    for col in df.select_dtypes(include="object").columns:
+        sample = df[col].dropna()
+        if sample.empty:
+            continue
+        stripped = sample.astype(str).str.replace(",", "", regex=False)
+        is_numeric = stripped.str.match(r"^\d+(\.\d+)?$")
+        if is_numeric.all():
+            df[col] = df[col].where(df[col].isna(), df[col].astype(str).str.replace(",", "", regex=False))
+    return df
+
+
 def execute_sql_sync(
     query: str,
     context: Optional[Dict[str, Any]] = None,
@@ -66,6 +84,8 @@ def execute_sql_sync(
         engine = _get_mysql_engine()
         with engine.connect() as conn:
             df = pd.read_sql_query(sqlalchemy.text(query), conn)
+
+        df = _strip_numeric_commas(df)
 
         elapsed_ms = (time.time() - start) * 1000
 
