@@ -1,5 +1,12 @@
+# Environment files — never commit real credentials
 .env
+**/.env
+.env.*
+**/.env.*
+!**/.env.example
+
 .DS_Store
+**/.DS_Store
 __pycache__/
 *.pyc
 node_modules/
