@@ -46,16 +46,9 @@ app.include_router(users.router,       prefix="/api/v1/users",      tags=["Users
 _COLUMN_MIGRATIONS = [
     # (column_name, ALTER TABLE SQL)
     ("status",
-     "ALTER TABLE users ADD COLUMN status ENUM('email_pending','pending','active','disabled') "
-     "NOT NULL DEFAULT 'active'"),
+     "ALTER TABLE users ADD COLUMN status ENUM('active','disabled') NOT NULL DEFAULT 'active'"),
     ("full_name",
      "ALTER TABLE users ADD COLUMN full_name VARCHAR(120) NULL"),
-    ("email_verified",
-     "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0"),
-    ("verification_token",
-     "ALTER TABLE users ADD COLUMN verification_token VARCHAR(100) NULL"),
-    ("verification_token_expires",
-     "ALTER TABLE users ADD COLUMN verification_token_expires DATETIME NULL"),
 ]
 
 
@@ -101,19 +94,19 @@ def _seed_default_users():
                     username="admin", email="admin@otenga.io",
                     password_hash=get_password_hash("admin123"),
                     role=UserRole.superuser, status=UserStatus.active,
-                    email_verified=True, avatar_color="#7C3AED",
+                    avatar_color="#7C3AED",
                 ),
                 User(
                     username="creator", email="creator@otenga.io",
                     password_hash=get_password_hash("creator123"),
                     role=UserRole.creator, status=UserStatus.active,
-                    email_verified=True, avatar_color="#00D4FF",
+                    avatar_color="#00D4FF",
                 ),
                 User(
                     username="viewer", email="viewer@otenga.io",
                     password_hash=get_password_hash("viewer123"),
                     role=UserRole.viewer, status=UserStatus.active,
-                    email_verified=True, avatar_color="#06FFA5",
+                    avatar_color="#06FFA5",
                 ),
             ]
             db.add_all(defaults)

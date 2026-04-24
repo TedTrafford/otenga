@@ -10,7 +10,6 @@ import ReportsPage     from './pages/ReportsPage'
 import SettingsPage    from './pages/SettingsPage'
 import UsersPage       from './pages/UsersPage'
 import DataPage        from './pages/DataPage'
-import VerifyEmailPage  from './pages/VerifyEmailPage'
 import SSOCallbackPage  from './pages/SSOCallbackPage'
 
 function PrivateRoute({ children, roles }) {
@@ -23,9 +22,8 @@ function PrivateRoute({ children, roles }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login"        element={<LoginPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/sso"          element={<SSOCallbackPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/sso"   element={<SSOCallbackPage />} />
 
       <Route path="/" element={
         <PrivateRoute>

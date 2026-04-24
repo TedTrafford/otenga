@@ -15,14 +15,6 @@ class UserCreate(UserBase):
     full_name: Optional[str] = None
 
 
-class RegisterRequest(BaseModel):
-    """Public self-registration – always creates a viewer with pending status."""
-    username: str
-    email: str
-    full_name: Optional[str] = None
-    password: str
-
-
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
@@ -37,7 +29,6 @@ class UserOut(UserBase):
     status: UserStatus
     avatar_color: str
     full_name: Optional[str] = None
-    email_verified: bool = False
     created_at: datetime
 
     class Config:

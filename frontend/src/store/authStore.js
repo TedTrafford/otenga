@@ -8,20 +8,6 @@ const useAuthStore = create((set, get) => ({
   isLoading: false,
   isAuthenticated: !!localStorage.getItem('otenga_token'),
 
-  register: async (formData) => {
-    set({ isLoading: true })
-    try {
-      await authApi.register(formData)
-      set({ isLoading: false })
-      toast.success('Account created! Please wait for an administrator to approve your request.')
-      return true
-    } catch (err) {
-      set({ isLoading: false })
-      toast.error(err.response?.data?.detail || 'Registration failed')
-      return false
-    }
-  },
-
   login: async (username, password) => {
     set({ isLoading: true })
     try {

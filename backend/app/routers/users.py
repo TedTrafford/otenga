@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
-from ..auth import get_current_active_user, require_role, get_password_hash
+from ..auth import get_current_active_user, require_role
 from ..models import User, UserRole, UserStatus, AuditLog
 from ..schemas import UserOut, UserUpdate, AuditLogOut
 
@@ -16,64 +16,6 @@ async def list_users(
 ):
     return db.query(User).order_by(User.created_at.desc()).all()
 
-
-@router.get("/pending", response_model=List[UserOut])
-async def list_pending_users(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.superuser)),
-):
-    """Return accounts that have verified email and are awaiting approval."""
-    return (
-        db.query(User)
-        .filter(User.status == UserStatus.pending)
-        .order_by(User.created_at.desc())
-        .all()
-    )
-
-
-@router.get("/unverified", response_model=List[UserOut])
-async def list_unverified_users(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.superuser)),
-):
-    """Return accounts that registered but haven't verified their email yet."""
-    return (
-        db.query(User)
-        .filter(User.status == UserStatus.email_pending)
-        .order_by(User.created_at.desc())
-        .all()
-    )
-
-
-@router.post("/{user_id}/verify-email", response_model=UserOut)
-async def admin_verify_email(
-    user_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.superuser)),
-):
-    """Superuser manually marks an email as verified and moves the account to pending approval."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.status != UserStatus.email_pending:
-        raise HTTPException(status_code=400, detail="User email is already verified")
-
-    user.email_verified             = True
-    user.status                     = UserStatus.pending
-    user.verification_token         = None
-    user.verification_token_expires = None
-
-    log = AuditLog(
-        user_id=current_user.id,
-        action="admin_verify_email",
-        resource_type="user",
-        resource_id=user_id,
-        details={"verified_username": user.username},
-    )
-    db.add(log)
-    db.commit()
-    db.refresh(user)
-    return user
 
 
 @router.get("/{user_id}", response_model=UserOut)
@@ -109,32 +51,6 @@ async def update_user(
     db.refresh(user)
     return user
 
-
-@router.post("/{user_id}/approve", response_model=UserOut)
-async def approve_user(
-    user_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.superuser)),
-):
-    """Approve a pending registration."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.status != UserStatus.pending:
-        raise HTTPException(status_code=400, detail="User is not in pending state")
-
-    user.status = UserStatus.active
-    log = AuditLog(
-        user_id=current_user.id,
-        action="approve_user",
-        resource_type="user",
-        resource_id=user_id,
-        details={"approved_username": user.username},
-    )
-    db.add(log)
-    db.commit()
-    db.refresh(user)
-    return user
 
 
 @router.post("/{user_id}/disable", response_model=UserOut)

@@ -12,10 +12,8 @@ class UserRole(str, enum.Enum):
 
 
 class UserStatus(str, enum.Enum):
-    email_pending = "email_pending"  # registered, must verify email first
-    pending       = "pending"        # email verified, awaiting superuser approval
-    active        = "active"         # approved and able to log in
-    disabled      = "disabled"       # suspended by superuser
+    active   = "active"    # able to log in
+    disabled = "disabled"  # suspended by superuser
 
 
 class NotebookStatus(str, enum.Enum):
@@ -31,16 +29,13 @@ class User(Base):
     username      = Column(String(50),  unique=True, index=True, nullable=False)
     email         = Column(String(100), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role          = Column(Enum(UserRole),   default=UserRole.viewer)
-    status        = Column(Enum(UserStatus), default=UserStatus.email_pending)
-    is_active     = Column(Boolean, default=True)
-    avatar_color  = Column(String(20), default="#00D4FF")
-    full_name     = Column(String(120), nullable=True)
-    email_verified           = Column(Boolean, default=False)
-    verification_token       = Column(String(100), nullable=True, index=True)
-    verification_token_expires = Column(DateTime(timezone=True), nullable=True)
-    created_at    = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at    = Column(DateTime(timezone=True), onupdate=func.now())
+    role         = Column(Enum(UserRole),   default=UserRole.viewer)
+    status       = Column(Enum(UserStatus), default=UserStatus.active)
+    is_active    = Column(Boolean, default=True)
+    avatar_color = Column(String(20), default="#00D4FF")
+    full_name    = Column(String(120), nullable=True)
+    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at   = Column(DateTime(timezone=True), onupdate=func.now())
 
     notebooks  = relationship("Notebook",  back_populates="owner")
     audit_logs = relationship("AuditLog",  back_populates="user")
