@@ -1,6 +1,4 @@
-#!/bin/sh
-'''exec' "/Users/thadeusmwalo/Documents/Consultancies/Aleza Credit/Business_Intelligence/Business_Intelligence_tool/backend/.venv/bin/python3" "$0" "$@"
-' '''
+#!/Users/thadeusmwalo/Documents/Consultancies/Aleza_Credit/Business_Intelligence/Business_Intelligence_tool/backend/.venv/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys

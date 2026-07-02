@@ -77,7 +77,7 @@ export default function DataPage() {
               <span className="w-2 h-2 rounded-full bg-mint-500 animate-pulse" />
               <span className="text-xs text-mint-500 font-medium">Connected</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5 font-mono">Data_Science @ 139.84.243.180</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 font-mono">Data_Science @ 65.20.86.247</p>
           </div>
 
           <div className="relative">

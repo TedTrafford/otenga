@@ -22,6 +22,10 @@ def _get_mysql_engine():
     return sqlalchemy.create_engine(url, pool_pre_ping=True)
 
 
+# Alias used by dashboard seed/export modules (Veriscore naming).
+_get_scoring_engine = _get_mysql_engine
+
+
 def _interpolate_variables(code: str, context: Dict[str, Any]) -> str:
     """Replace {{variable}} placeholders with context values."""
     import re
@@ -58,7 +62,7 @@ def _strip_numeric_commas(df: pd.DataFrame) -> pd.DataFrame:
 
     This cleans data like phone numbers stored as '0722,123,456' or credit limits
     stored as '50,000.00' without touching columns that contain real textual commas
-    (e.g. 'John, Smith' or 'Nairobi, Kenya').
+    (e.g. 'Thomas, Rakwach' or 'Nairobi, Kenya').
     """
     for col in df.select_dtypes(include="object").columns:
         sample = df[col].dropna()

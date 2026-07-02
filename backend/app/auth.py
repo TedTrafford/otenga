@@ -58,16 +58,6 @@ async def get_current_user(
 
 
 async def get_current_active_user(current_user: models.User = Depends(get_current_user)) -> models.User:
-    if current_user.status == models.UserStatus.email_pending:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email address first.",
-        )
-    if current_user.status == models.UserStatus.pending:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account is pending approval by an administrator.",
-        )
     if current_user.status == models.UserStatus.disabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

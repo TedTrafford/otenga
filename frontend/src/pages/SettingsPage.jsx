@@ -55,7 +55,7 @@ export default function SettingsPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Section icon={Database} title="Data Source">
           <Row label="Host" sub="MySQL server address">
-            <span className="text-xs font-mono text-slate-400">139.84.243.180</span>
+            <span className="text-xs font-mono text-slate-400">65.20.86.247</span>
           </Row>
           <Row label="Port">
             <span className="text-xs font-mono text-slate-400">3306</span>

@@ -9,6 +9,7 @@ import useNotebookStore from '../store/notebookStore'
 import useAuthStore from '../store/authStore'
 import { dashboardsApi } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
+import toast from 'react-hot-toast'
 
 // ── Clickable stat card ───────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, sub, subAlert, color, delay, onClick }) => (
@@ -123,7 +124,7 @@ export default function HomePage() {
     fetchNotebooks()
     dashboardsApi.list()
       .then(r => setDashboards(r.data))
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load dashboards'))
       .finally(() => setDashLoading(false))
 
     // For superusers, also fetch pending dashboard count

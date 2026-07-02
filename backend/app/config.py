@@ -1,5 +1,11 @@
 import os
+from pathlib import Path
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_ROOT_DIR = _BACKEND_DIR.parent
 
 
 class Settings(BaseSettings):
@@ -7,41 +13,71 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
-    # ── App metadata DB (BI_Otenga on MySQL) ──────────────────────────────
-    BI_DB_HOST: str = os.environ.get("MPESA_DB_HOST", "139.84.243.180")
-    BI_DB_PORT: int = int(os.environ.get("MPESA_DB_PORT", 3306))
+    # ── App metadata DB (BI_Otenga — dashboards, users, notebooks) ───────────
+    BI_DB_HOST: str = ""
+    BI_DB_PORT: int = 3306
     BI_DB_NAME: str = "BI_Otenga"
-    BI_DB_USER: str = os.environ.get("MPESA_DB_USER", "staging")
-    BI_DB_PASSWORD: str = os.environ.get("MPESA_DB_PASSWORD", "gQTnYQ8Xwh1nl0di1rbz")
+    BI_DB_USER: str = ""
+    BI_DB_PASSWORD: str = ""
 
-    # ── Data query DB (Data_Science on MySQL) ────────────────────────────
-    MPESA_DB_HOST: str = os.environ.get("MPESA_DB_HOST", "139.84.243.180")
-    MPESA_DB_PORT: int = int(os.environ.get("MPESA_DB_PORT", 3306))
-    MPESA_DB_NAME: str = os.environ.get("MPESA_DB_NAME", "Data_Science")
-    MPESA_DB_USER: str = os.environ.get("MPESA_DB_USER", "staging")
-    MPESA_DB_PASSWORD: str = os.environ.get("MPESA_DB_PASSWORD", "gQTnYQ8Xwh1nl0di1rbz")
+    # ── Data query DB (Data_Science — dashboard widget SQL) ──────────────────
+    MPESA_DB_HOST: str = ""
+    MPESA_DB_PORT: int = 3306
+    MPESA_DB_NAME: str = "Data_Science"
+    MPESA_DB_USER: str = ""
+    MPESA_DB_PASSWORD: str = ""
 
     # ── Email / SMTP settings ─────────────────────────────────────────────
-    # Leave SMTP_HOST empty to skip actual email sending and print link to console
-    SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
-    SMTP_PORT: int = int(os.environ.get("SMTP_PORT", 587))
-    SMTP_USER: str = os.environ.get("SMTP_USER", "")
-    SMTP_PASSWORD: str = os.environ.get("SMTP_PASSWORD", "")
-    SMTP_FROM_EMAIL: str = os.environ.get("SMTP_FROM_EMAIL", "noreply@otenga.io")
-    SMTP_FROM_NAME: str = os.environ.get("SMTP_FROM_NAME", "Otenga BI Platform")
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@otenga.io"
+    SMTP_FROM_NAME: str = "Otenga BI Platform"
 
-    # The base URL the frontend is served at (used to build verification links)
-    APP_BASE_URL: str = os.environ.get("APP_BASE_URL", "http://localhost:5173")
+    APP_BASE_URL: str = "http://localhost:5173"
 
-    # ── Laravel SSO integration ───────────────────────────────────────────────
-    # Must match APP_KEY (or jwt.secret) from the Laravel app's .env
-    LARAVEL_JWT_SECRET: str = os.environ.get("LARAVEL_JWT_SECRET", "")
-    # Full URL users are sent to when they click "Login with Company App"
-    # e.g. https://app.aleza.co.ke/sso/redirect?return_to=<otenga_url>
-    LARAVEL_APP_URL: str = os.environ.get("LARAVEL_APP_URL", "")
+    # ── Laravel SSO integration ───────────────────────────────────────────
+    LARAVEL_JWT_SECRET: str = ""
+    LARAVEL_APP_URL: str = ""
+
+    DASHBOARD_REFRESH_ON_STARTUP: bool = False
+    DASHBOARD_REFRESH_WORKERS: int = 8
+
+    @model_validator(mode="after")
+    def _apply_db_defaults(self):
+        """Fall back to MPESA_DB_* for any unset BI metadata connection fields."""
+        legacy_host = self.MPESA_DB_HOST or os.environ.get("MPESA_DB_HOST", "65.20.86.247")
+        legacy_port = self.MPESA_DB_PORT or int(os.environ.get("MPESA_DB_PORT", 3306))
+        legacy_user = self.MPESA_DB_USER or os.environ.get("MPESA_DB_USER", "production")
+        legacy_password = self.MPESA_DB_PASSWORD or os.environ.get("MPESA_DB_PASSWORD", "")
+
+        if not self.BI_DB_HOST:
+            self.BI_DB_HOST = legacy_host
+        if not self.BI_DB_PORT:
+            self.BI_DB_PORT = legacy_port
+        if not self.BI_DB_USER:
+            self.BI_DB_USER = legacy_user
+        if not self.BI_DB_PASSWORD:
+            self.BI_DB_PASSWORD = legacy_password
+
+        if not self.MPESA_DB_HOST:
+            self.MPESA_DB_HOST = legacy_host
+        if not self.MPESA_DB_PORT:
+            self.MPESA_DB_PORT = legacy_port
+        if not self.MPESA_DB_USER:
+            self.MPESA_DB_USER = legacy_user
+        if not self.MPESA_DB_PASSWORD:
+            self.MPESA_DB_PASSWORD = legacy_password
+
+        return self
 
     class Config:
-        env_file = ".env"
+        # Fixed paths — not cwd-dependent (matches Veriscore BI platform).
+        env_file = (
+            str(_BACKEND_DIR / ".env"),
+            str(_ROOT_DIR / ".env"),
+        )
         env_file_encoding = "utf-8"
 
 

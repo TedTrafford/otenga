@@ -7,7 +7,7 @@ import {
   BarChart3, Plus, Save, Trash2, Settings2, GripVertical,
   AreaChart, PieChart, TableProperties, SlidersHorizontal, Type,
   Play, X, TrendingUp, ScatterChart, Loader,
-  BarChart2, LineChart, CheckCircle2, AlignStartVertical, Send,
+  BarChart2, LineChart, CheckCircle2, AlignStartVertical, Send, Download,
 } from 'lucide-react'
 import Editor from '@monaco-editor/react'
 import { dashboardsApi, executionApi } from '../../api/client'
@@ -24,6 +24,28 @@ const Plot = lazy(() =>
 
 // ── Colour palette for chart traces ─────────────────────────────────────────
 const PALETTE = ['#00D4FF','#7C3AED','#06FFA5','#FF4D6D','#FFB800','#EC4899','#34D399','#F97316']
+
+const PHONE_COLUMNS = new Set(['mobile_number', 'phone_number', 'supplied_phone_number', 'extracted_phone_number'])
+
+function isWidgetExportable(widget) {
+  if (!widget) return false
+  if (widget.exportable || widget.exportSql) return true
+  if (widget.type === 'table' && widget.columns?.some(c => PHONE_COLUMNS.has(String(c).toLowerCase()))) return true
+  const id = widget.id || ''
+  if (/^(cs|rr|rms|fraud|cf)-/.test(id)) return true
+  if (id === 'fp-kpi-failed' || id === 'fp-chart-profiling') return true
+  if (id.startsWith('fp-table-') && widget.columns?.some(c => PHONE_COLUMNS.has(String(c).toLowerCase()))) return true
+  return false
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 const CHART_TYPES = [
   { type: 'bar',         label: 'Bar',     icon: BarChart2          },
@@ -518,7 +540,45 @@ function WidgetConfigModal({ widget, onSave, onClose, onLiveTitleChange }) {
 }
 
 // ── Widget Card ──────────────────────────────────────────────────────────────
-function WidgetCard({ widget, onRemove, onEdit }) {
+function WidgetCard({ widget, onRemove, onEdit, dashboardId, timeFilter }) {
+  const [exporting, setExporting] = useState(false)
+  const canExport = isWidgetExportable(widget)
+
+  const handleExport = async (e) => {
+    e.stopPropagation()
+    if (!dashboardId) {
+      toast.error('Save the dashboard before exporting')
+      return
+    }
+    setExporting(true)
+    try {
+      const { data, headers } = await dashboardsApi.exportWidget(
+        dashboardId,
+        widget.id,
+        timeFilter || { preset: 'yesterday' },
+      )
+      const disposition = headers['content-disposition'] || ''
+      const match = disposition.match(/filename="([^"]+)"/)
+      const filename = match?.[1] || `${widget.title || 'customers'}-phones.csv`
+      downloadBlob(data, filename)
+      toast.success('Download started')
+    } catch (err) {
+      let message = 'Export failed'
+      const data = err.response?.data
+      if (data instanceof Blob) {
+        try {
+          const json = JSON.parse(await data.text())
+          message = json.detail || message
+        } catch { /* keep default */ }
+      } else if (data?.detail) {
+        message = data.detail
+      }
+      toast.error(message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const darkLayout = {
     paper_bgcolor: 'transparent', plot_bgcolor: 'rgba(255,255,255,0.01)',
     font: { color: '#94A3B8', family: 'Inter', size: 10 },
@@ -537,13 +597,25 @@ function WidgetCard({ widget, onRemove, onEdit }) {
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <GripVertical size={13} className="text-slate-700 cursor-grab flex-shrink-0" />
         <span className="text-xs font-semibold text-slate-300 flex-1 truncate">{widget.title}</span>
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-0.5 items-center">
+          {canExport && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="p-1.5 rounded text-slate-500 hover:text-mint-400 hover:bg-mint-500/10 transition-all disabled:opacity-50 opacity-70 group-hover:opacity-100"
+              title="Download widget data (CSV)"
+            >
+              {exporting ? <Loader size={11} className="animate-spin" /> : <Download size={11} />}
+            </button>
+          )}
+          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => onEdit(widget.id)} className="p-1.5 rounded text-slate-600 hover:text-primary hover:bg-primary/10 transition-all" title="Configure">
             <Settings2 size={11} />
           </button>
           <button onClick={() => onRemove(widget.id)} className="p-1.5 rounded text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Remove">
             <Trash2 size={11} />
           </button>
+          </div>
         </div>
       </div>
 
@@ -641,7 +713,7 @@ const STATUS_BADGE = {
 }
 
 // ── Main DashboardBuilder ────────────────────────────────────────────────────
-export default function DashboardBuilder({ dashboard: initialDashboard, onSave }) {
+export default function DashboardBuilder({ dashboard: initialDashboard, onSave, timeFilter }) {
   const [dashboard,  setDashboard]  = useState(initialDashboard)
   const [widgets,    setWidgets]    = useState(initialDashboard?.widgets || [])
   const [layout,     setLayout]     = useState(initialDashboard?.layout  || [])
@@ -651,6 +723,12 @@ export default function DashboardBuilder({ dashboard: initialDashboard, onSave }
   const [submitting, setSubmitting] = useState(false)
   const { isCreator, isSuperuser }  = useAuthStore()
   const cols = 12
+
+  useEffect(() => {
+    setDashboard(initialDashboard)
+    setWidgets(initialDashboard?.widgets || [])
+    setLayout(initialDashboard?.layout || [])
+  }, [initialDashboard])
 
   const addWidget = (type) => {
     const id = nanoid()
@@ -838,6 +916,8 @@ export default function DashboardBuilder({ dashboard: initialDashboard, onSave }
                     widget={widget}
                     onRemove={removeWidget}
                     onEdit={setConfigId}
+                    dashboardId={dashboard?.id}
+                    timeFilter={timeFilter}
                   />
                 </div>
               ))}

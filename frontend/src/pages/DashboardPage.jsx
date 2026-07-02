@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BarChart3, Plus, Trash2, Edit3, Clock, Send, X, ArrowRight, Layers, CheckCircle2, Eye } from 'lucide-react'
+import { BarChart3, Plus, Trash2, Edit3, Clock, Send, X, ArrowRight, Layers, CheckCircle2, Eye, Loader2 } from 'lucide-react'
 import { dashboardsApi } from '../api/client'
 import useAuthStore from '../store/authStore'
+import DashboardTimeFilter, { DEFAULT_TIME_FILTER } from '../components/dashboard/DashboardTimeFilter'
 import DashboardBuilder from '../components/dashboard/DashboardBuilder'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -126,11 +127,37 @@ export default function DashboardPage() {
   const [selected, setSelected]       = useState(null)
   const [mode, setMode]               = useState('list')   // 'list' | 'build'
   const [showCreate, setShowCreate]   = useState(false)
+  const [openingId, setOpeningId]     = useState(null)
+  const [refreshing, setRefreshing]   = useState(false)
+  const [timeFilter, setTimeFilter]   = useState(DEFAULT_TIME_FILTER)
   const { isCreator, isSuperuser }    = useAuthStore()
 
+  const widgetCount = (dash) => dash.widget_count ?? (dash.widgets || []).length
+
   useEffect(() => {
-    dashboardsApi.list().then(r => setDashboards(r.data)).finally(() => setLoading(false))
+    dashboardsApi.list()
+      .then(r => setDashboards(r.data))
+      .catch(() => toast.error('Failed to load dashboards'))
+      .finally(() => setLoading(false))
   }, [])
+
+  const refreshDashboard = async (dash, filter = DEFAULT_TIME_FILTER) => {
+    setOpeningId(dash.id)
+    setRefreshing(true)
+    try {
+      const { data } = await dashboardsApi.refresh(dash.id, filter)
+      setSelected(data)
+      setTimeFilter(filter)
+      setMode('build')
+    } catch {
+      toast.error('Failed to load dashboard data from database')
+    } finally {
+      setOpeningId(null)
+      setRefreshing(false)
+    }
+  }
+
+  const openDashboard = (dash) => refreshDashboard(dash, DEFAULT_TIME_FILTER)
 
   const handleCreate = async (name, description) => {
     try {
@@ -197,9 +224,16 @@ export default function DashboardPage() {
           <span className="text-slate-700">/</span>
           <span className="text-xs text-slate-400 truncate max-w-xs">{selected.name}</span>
         </div>
+        <DashboardTimeFilter
+          value={timeFilter}
+          onChange={setTimeFilter}
+          onApply={(filter) => refreshDashboard(selected, filter)}
+          loading={refreshing}
+        />
         <div className="flex-1 min-h-0">
           <DashboardBuilder
             dashboard={selected}
+            timeFilter={timeFilter}
             onSave={(updates) => {
               const merged = { ...selected, ...updates }
               setSelected(merged)
@@ -257,7 +291,7 @@ export default function DashboardPage() {
                 <motion.div
                   key={dash.id}
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  onClick={() => { setSelected(dash); setMode('build') }}
+                  onClick={() => openDashboard(dash)}
                   className="glass-hover rounded-2xl p-5 cursor-pointer group relative overflow-hidden"
                 >
                   {/* Subtle ambient glow */}
@@ -283,15 +317,21 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2 text-[11px] text-slate-600">
                     <Clock size={10} />
                     {formatDistanceToNow(new Date(dash.updated_at || dash.created_at), { addSuffix: true })}
-                    <span className="ml-auto">{(dash.widgets || []).length} widget{(dash.widgets || []).length !== 1 ? 's' : ''}</span>
+                    <span className="ml-auto">{widgetCount(dash)} widget{widgetCount(dash) !== 1 ? 's' : ''}</span>
                   </div>
+
+                  {openingId === dash.id && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/70">
+                      <Loader2 size={22} className="text-primary animate-spin" />
+                    </div>
+                  )}
 
                   {/* Hover action buttons */}
                   <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
                     {/* Edit — creator on draft/pending, superuser always */}
                     {(isCreator() && dash.status !== 'published') || isSuperuser() ? (
                       <button
-                        onClick={e => { e.stopPropagation(); setSelected(dash); setMode('build') }}
+                        onClick={e => { e.stopPropagation(); openDashboard(dash) }}
                         className="p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-primary/10 transition-all"
                         title="Open builder">
                         <Edit3 size={12} />
@@ -299,7 +339,7 @@ export default function DashboardPage() {
                     ) : (
                       /* Viewer: view-only */
                       <button
-                        onClick={e => { e.stopPropagation(); setSelected(dash); setMode('build') }}
+                        onClick={e => { e.stopPropagation(); openDashboard(dash) }}
                         className="p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-primary/10 transition-all"
                         title="View dashboard">
                         <Eye size={12} />

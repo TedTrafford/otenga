@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Any, Dict
-from datetime import datetime
+from datetime import datetime, date
 from .models import UserRole, UserStatus, NotebookStatus
 
 
@@ -111,6 +111,12 @@ class DashboardUpdate(BaseModel):
     status: Optional[NotebookStatus] = None
 
 
+class DashboardRefreshRequest(BaseModel):
+    preset: str = "yesterday"
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+
+
 class DashboardOut(DashboardBase):
     id: int
     notebook_id: Optional[int]
@@ -123,6 +129,15 @@ class DashboardOut(DashboardBase):
 
     class Config:
         from_attributes = True
+
+
+class DashboardSummaryOut(DashboardBase):
+    """Lightweight dashboard metadata for list views (no widget payload)."""
+    id: int
+    status: NotebookStatus
+    widget_count: int = 0
+    created_at: datetime
+    updated_at: datetime
 
 
 class ExecuteRequest(BaseModel):

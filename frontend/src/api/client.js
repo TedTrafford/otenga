@@ -52,12 +52,34 @@ export const dashboardsApi = {
   list:        ()         => client.get('/dashboards/'),
   pending:     ()         => client.get('/dashboards/pending'),
   get:         (id)       => client.get(`/dashboards/${id}`),
+  refresh: (id, filter = {}) => client.post(
+    `/dashboards/${id}/refresh`,
+    {
+      preset: filter.preset || 'yesterday',
+      start_date: filter.startDate || filter.start_date || null,
+      end_date: filter.endDate || filter.end_date || null,
+    },
+    { timeout: 300000 },
+  ),
   create:      (data)     => client.post('/dashboards/', data),
   update:      (id, data) => client.put(`/dashboards/${id}`, data),
   delete:      (id)       => client.delete(`/dashboards/${id}`),
   submit:      (id)       => client.post(`/dashboards/${id}/submit`),
   publish:     (id)       => client.post(`/dashboards/${id}/publish`),
   unpublish:   (id)       => client.post(`/dashboards/${id}/unpublish`),
+  exportWidget: (dashboardId, widgetId, filter = {}, segment = null) => client.get(
+    `/dashboards/${dashboardId}/widgets/${widgetId}/export`,
+    {
+      params: {
+        preset: filter.preset || 'yesterday',
+        start_date: filter.startDate || filter.start_date || undefined,
+        end_date: filter.endDate || filter.end_date || undefined,
+        segment: segment || undefined,
+      },
+      responseType: 'blob',
+      timeout: 300000,
+    },
+  ),
 }
 
 export const usersApi = {

@@ -86,7 +86,7 @@ function DashboardCard({ dash, onPublish }) {
           </div>
           {dash.description && <p className="text-xs text-slate-500 mb-2 truncate">{dash.description}</p>}
           <div className="flex items-center gap-3 text-[11px] text-slate-600">
-            <span>{(dash.widgets || []).length} widget{(dash.widgets || []).length !== 1 ? 's' : ''}</span>
+            <span>{dash.widget_count ?? (dash.widgets || []).length} widget{(dash.widget_count ?? (dash.widgets || []).length) !== 1 ? 's' : ''}</span>
             <span>·</span>
             <span className="flex items-center gap-1">
               <Clock size={9} />

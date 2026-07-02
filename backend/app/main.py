@@ -6,6 +6,13 @@ from .database import engine, Base
 from .routers import auth_router, notebooks, execution, dashboards, users
 from .models import User, UserRole, UserStatus
 from .auth import get_password_hash
+from .fraud_dashboard import ensure_fraud_dashboard
+from .file_processing_dashboard import ensure_file_processing_dashboard
+from .subscriber_profiles_dashboard import ensure_subscriber_profiles_dashboard
+from .rejection_reasons_dashboard import ensure_rejection_reasons_dashboard
+from .raw_mpesa_statements_dashboard import ensure_raw_mpesa_statements_dashboard
+from .customer_funnel_dashboard import ensure_customer_funnel_dashboard
+from .bi_storage import ensure_bi_storage
 
 # ── Create / verify tables ─────────────────────────────────────────────────────
 try:
@@ -80,6 +87,14 @@ def _run_column_migrations():
 async def startup():
     _run_column_migrations()
     _seed_default_users()
+    ensure_bi_storage()
+    ensure_fraud_dashboard()
+    ensure_file_processing_dashboard()
+    ensure_subscriber_profiles_dashboard()
+    ensure_rejection_reasons_dashboard()
+    ensure_raw_mpesa_statements_dashboard()
+    ensure_customer_funnel_dashboard()
+    print("✅ API ready — dashboard data refreshes when you open a dashboard")
 
 
 def _seed_default_users():
