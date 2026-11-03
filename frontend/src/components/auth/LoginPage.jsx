@@ -177,7 +177,7 @@ export default function LoginPage() {
             </div>
 
             <p className="text-xs text-slate-700 text-center pb-5">
-              © 2026 Otenga · Aleza Credit BI Platform
+              © 2026 Otenga · Business Intelligence Platform
             </p>
           </div>
         </motion.div>

@@ -13,6 +13,7 @@ from .rejection_reasons_dashboard import ensure_rejection_reasons_dashboard
 from .raw_mpesa_statements_dashboard import ensure_raw_mpesa_statements_dashboard
 from .customer_funnel_dashboard import ensure_customer_funnel_dashboard
 from .bi_storage import ensure_bi_storage
+from .config import settings
 
 # ── Create / verify tables ─────────────────────────────────────────────────────
 try:
@@ -29,14 +30,20 @@ app = FastAPI(
     redoc_url="/api/redoc",
 )
 
+_CORS_ORIGINS = list(
+    dict.fromkeys(
+        [
+            settings.APP_BASE_URL.rstrip("/"),
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+        ]
+    )
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://bi.aleza.co.ke",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

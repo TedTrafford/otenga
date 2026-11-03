@@ -17,7 +17,7 @@ from .dashboard_date_filter import (
     should_apply_date_filter,
 )
 from .execution_engine import execute_sql_sync
-from .dashboard_widgets import build_figure, clean_rows
+from .dashboard_widgets import build_figure, build_stacked_bar, clean_rows
 from .models import Dashboard
 
 
@@ -31,6 +31,37 @@ def _format_metric(val):
     if isinstance(val, int):
         return f"{val:,}"
     return str(val)
+
+
+def _infer_series_col(widget: dict, columns: list) -> Optional[str]:
+    series_col = widget.get("seriesCol")
+    if series_col:
+        return series_col
+    for candidate in (
+        "fraud_decision",
+        "decision",
+        "status",
+        "reason_code",
+        "risk_segment",
+        "credit_outcome",
+    ):
+        if candidate in columns:
+            return candidate
+    return None
+
+
+def _rebuild_chart_figure(widget: dict, rows: list, columns: list) -> Optional[dict]:
+    chart_type = widget.get("chartType") or "bar"
+    x_col = widget.get("xCol")
+    y_cols = widget.get("yCols") or []
+    title = widget.get("title") or ""
+
+    if chart_type == "stacked_bar" and x_col and y_cols:
+        series_col = _infer_series_col(widget, columns)
+        if series_col:
+            return build_stacked_bar(rows, x_col, series_col, y_cols[0])
+
+    return build_figure(rows, x_col, y_cols, chart_type, title)
 
 
 def _apply_query_result(widget: dict, template_sql: str, result: dict) -> dict:
@@ -49,23 +80,12 @@ def _apply_query_result(widget: dict, template_sql: str, result: dict) -> dict:
             updated["value"] = _format_metric(rows[0].get(col))
 
     if wtype == "chart":
-        existing_fig = widget.get("figData")
-        traces = (existing_fig or {}).get("data") or []
-        custom_fig = (
-            widget.get("chartType") == "stacked_bar"
-            and len(traces) > 1
-            and len(widget.get("yCols") or []) <= 1
-        )
-        if not custom_fig:
-            fig = build_figure(
-                rows,
-                widget.get("xCol"),
-                widget.get("yCols") or [],
-                widget.get("chartType") or "bar",
-                widget.get("title") or "",
-            )
-            if fig:
-                updated["figData"] = fig
+        try:
+            fig = _rebuild_chart_figure(widget, rows, columns)
+        except Exception:
+            fig = widget.get("figData")
+        if fig:
+            updated["figData"] = fig
 
     return updated
 

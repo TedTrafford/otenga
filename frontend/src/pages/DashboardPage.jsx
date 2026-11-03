@@ -130,6 +130,7 @@ export default function DashboardPage() {
   const [openingId, setOpeningId]     = useState(null)
   const [refreshing, setRefreshing]   = useState(false)
   const [timeFilter, setTimeFilter]   = useState(DEFAULT_TIME_FILTER)
+  const [refreshToken, setRefreshToken] = useState(0)
   const { isCreator, isSuperuser }    = useAuthStore()
 
   const widgetCount = (dash) => dash.widget_count ?? (dash.widgets || []).length
@@ -148,6 +149,7 @@ export default function DashboardPage() {
       const { data } = await dashboardsApi.refresh(dash.id, filter)
       setSelected(data)
       setTimeFilter(filter)
+      setRefreshToken(t => t + 1)
       setMode('build')
     } catch {
       toast.error('Failed to load dashboard data from database')
@@ -232,8 +234,10 @@ export default function DashboardPage() {
         />
         <div className="flex-1 min-h-0">
           <DashboardBuilder
+            key={`${selected.id}-${refreshToken}`}
             dashboard={selected}
             timeFilter={timeFilter}
+            chartRevision={refreshToken}
             onSave={(updates) => {
               const merged = { ...selected, ...updates }
               setSelected(merged)

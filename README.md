@@ -1,6 +1,6 @@
 # ⚡ Otenga — Python-Native Business Intelligence Platform
 
-> A collaborative BI platform where data creators write SQL, transform with Python/Pandas, and publish interactive dashboards — built for **Aleza Credit**.
+> A collaborative BI platform where data creators write SQL, transform with Python/Pandas, and publish interactive dashboards.
 
 ## ✨ Features
 
@@ -100,8 +100,7 @@ LARAVEL_JWT_SECRET=your_laravel_jwt_secret_here
 
 # URL on the Laravel side that triggers login and redirects back to Otenga
 # Laravel should append ?token=<jwt> to the return_to value it receives
-# Production:  https://staging.aleza.co.ke
-LARAVEL_APP_URL=https://staging.aleza.co.ke
+LARAVEL_APP_URL=https://your-laravel-app.example.com
 ```
 
 **2. Configure the Laravel app** to redirect to Otenga after authentication:
@@ -304,7 +303,7 @@ Base URL: `http://localhost:8000/api/v1`
 
 Interactive API docs:
 - **Local:** http://localhost:8000/api/docs
-- **Production:** https://bi.aleza.co.ke/api/docs
+- **Production:** `{APP_BASE_URL}` on the backend host at `/api/docs` (set `APP_BASE_URL` in `backend/.env`)
 
 ---
 
@@ -328,10 +327,7 @@ cp backend/.env.example backend/.env
 
 > SMTP / email variables in `backend/.env.example` are no longer used. They can be left blank.
 
-**CORS:** The backend allows requests from the following origins. Add new origins in `backend/app/main.py`:
-- `https://bi.aleza.co.ke` (production)
-- `http://localhost:5173` (local dev)
-- `http://localhost:3000` (local dev)
+**CORS:** The backend allows requests from `APP_BASE_URL` (from `backend/.env`) plus local dev origins. To allow additional origins, edit `backend/app/main.py`.
 
 ---
 

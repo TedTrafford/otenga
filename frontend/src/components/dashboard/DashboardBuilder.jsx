@@ -540,7 +540,7 @@ function WidgetConfigModal({ widget, onSave, onClose, onLiveTitleChange }) {
 }
 
 // ── Widget Card ──────────────────────────────────────────────────────────────
-function WidgetCard({ widget, onRemove, onEdit, dashboardId, timeFilter }) {
+function WidgetCard({ widget, onRemove, onEdit, dashboardId, timeFilter, chartRevision }) {
   const [exporting, setExporting] = useState(false)
   const canExport = isWidgetExportable(widget)
 
@@ -597,25 +597,23 @@ function WidgetCard({ widget, onRemove, onEdit, dashboardId, timeFilter }) {
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <GripVertical size={13} className="text-slate-700 cursor-grab flex-shrink-0" />
         <span className="text-xs font-semibold text-slate-300 flex-1 truncate">{widget.title}</span>
-        <div className="flex gap-0.5 items-center">
+        <div className="flex gap-0.5 items-center opacity-0 group-hover:opacity-100 transition-opacity">
           {canExport && (
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="p-1.5 rounded text-slate-500 hover:text-mint-400 hover:bg-mint-500/10 transition-all disabled:opacity-50 opacity-70 group-hover:opacity-100"
+              className="p-1.5 rounded text-slate-600 hover:text-mint-400 hover:bg-mint-500/10 transition-all disabled:opacity-50"
               title="Download widget data (CSV)"
             >
               {exporting ? <Loader size={11} className="animate-spin" /> : <Download size={11} />}
             </button>
           )}
-          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => onEdit(widget.id)} className="p-1.5 rounded text-slate-600 hover:text-primary hover:bg-primary/10 transition-all" title="Configure">
             <Settings2 size={11} />
           </button>
           <button onClick={() => onRemove(widget.id)} className="p-1.5 rounded text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Remove">
             <Trash2 size={11} />
           </button>
-          </div>
         </div>
       </div>
 
@@ -624,6 +622,7 @@ function WidgetCard({ widget, onRemove, onEdit, dashboardId, timeFilter }) {
         {widget.type === 'chart' && widget.figData ? (
           <Suspense fallback={<div className="skeleton w-full h-full" />}>
             <Plot
+              key={`${widget.id}-${chartRevision ?? 0}-${timeFilter?.preset ?? 'default'}`}
               data={widget.figData.data}
               layout={{ ...darkLayout, ...(widget.figData.layout || {}), autosize: true }}
               config={{ displayModeBar: false, responsive: true }}
@@ -713,7 +712,7 @@ const STATUS_BADGE = {
 }
 
 // ── Main DashboardBuilder ────────────────────────────────────────────────────
-export default function DashboardBuilder({ dashboard: initialDashboard, onSave, timeFilter }) {
+export default function DashboardBuilder({ dashboard: initialDashboard, onSave, timeFilter, chartRevision }) {
   const [dashboard,  setDashboard]  = useState(initialDashboard)
   const [widgets,    setWidgets]    = useState(initialDashboard?.widgets || [])
   const [layout,     setLayout]     = useState(initialDashboard?.layout  || [])
@@ -918,6 +917,7 @@ export default function DashboardBuilder({ dashboard: initialDashboard, onSave, 
                     onEdit={setConfigId}
                     dashboardId={dashboard?.id}
                     timeFilter={timeFilter}
+                    chartRevision={chartRevision}
                   />
                 </div>
               ))}

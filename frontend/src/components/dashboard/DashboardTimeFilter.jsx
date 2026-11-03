@@ -12,15 +12,87 @@ export const TIME_PRESETS = [
 
 export const DEFAULT_TIME_FILTER = { preset: 'yesterday', startDate: '', endDate: '' }
 
-function yesterdayIso() {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().slice(0, 10)
+const EAT = 'Africa/Nairobi'
+
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+/** YYYY-MM-DD for a given instant in EAT. */
+function getEatYmd(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: EAT,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const get = (type) => parts.find(p => p.type === type)?.value
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
+function addDaysYmd(ymd, days) {
+  const anchor = new Date(`${ymd}T12:00:00+03:00`)
+  anchor.setUTCDate(anchor.getUTCDate() + days)
+  return getEatYmd(anchor)
+}
+
+/** Format YYYY-MM-DD as DD-MM-YYYY. */
+function formatDdMmYyyyFromYmd(ymd) {
+  const [y, m, d] = ymd.split('-')
+  return `${d}-${m}-${y}`
+}
+
+/** Format an instant as DD-MM-YYYY HH:MM in EAT. */
+function formatEatDateTime(date) {
+  const datePart = formatDdMmYyyyFromYmd(getEatYmd(date))
+  const timePart = new Intl.DateTimeFormat('en-GB', {
+    timeZone: EAT,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
+  return `${datePart} ${timePart}`
+}
+
+/** Resolve the active [start, end) filter bounds — mirrors backend resolve_date_range (EAT). */
+export function resolveActiveRangeLabel(filter) {
+  const now = new Date()
+  const todayYmd = getEatYmd(now)
+
+  if (filter.preset === 'custom') {
+    if (!filter.startDate || !filter.endDate) return null
+    return {
+      start: formatDdMmYyyyFromYmd(filter.startDate),
+      end: formatDdMmYyyyFromYmd(addDaysYmd(filter.endDate, 1)),
+    }
+  }
+
+  if (filter.preset === 'yesterday') {
+    return {
+      start: formatDdMmYyyyFromYmd(addDaysYmd(todayYmd, -1)),
+      end: formatDdMmYyyyFromYmd(todayYmd),
+    }
+  }
+
+  const days = { '7d': 7, '30d': 30, '180d': 180, '365d': 365 }[filter.preset]
+  if (days) {
+    return {
+      start: formatDdMmYyyyFromYmd(addDaysYmd(todayYmd, -days)),
+      end: formatEatDateTime(now),
+    }
+  }
+
+  return null
+}
+
+function yesterdayYmdEat() {
+  return addDaysYmd(getEatYmd(new Date()), -1)
 }
 
 export default function DashboardTimeFilter({ value, onChange, onApply, loading }) {
-  const [customStart, setCustomStart] = useState(value.startDate || yesterdayIso())
-  const [customEnd, setCustomEnd] = useState(value.endDate || yesterdayIso())
+  const [customStart, setCustomStart] = useState(value.startDate || yesterdayYmdEat())
+  const [customEnd, setCustomEnd] = useState(value.endDate || yesterdayYmdEat())
+  const rangeLabel = resolveActiveRangeLabel(value)
 
   const selectPreset = (preset) => {
     if (preset === 'custom') {
@@ -95,8 +167,22 @@ export default function DashboardTimeFilter({ value, onChange, onApply, loading 
         </button>
       </div>
 
+      {rangeLabel && (
+        <span
+          className="ml-auto flex items-center gap-1.5 text-[11px] font-mono text-slate-400"
+          title="Date column filter applied to dashboard queries (EAT / Africa-Nairobi)"
+        >
+          <span className="text-slate-600 hidden sm:inline">Filtering (EAT)</span>
+          <span>
+            ≥ {rangeLabel.start}
+            <span className="text-slate-600 mx-1">·</span>
+            &lt; {rangeLabel.end}
+          </span>
+        </span>
+      )}
+
       {loading && (
-        <span className="ml-auto flex items-center gap-1.5 text-xs text-slate-500">
+        <span className={`flex items-center gap-1.5 text-xs text-slate-500${rangeLabel ? ' ml-2' : ' ml-auto'}`}>
           <Loader2 size={13} className="animate-spin text-primary" />
           Loading data…
         </span>
