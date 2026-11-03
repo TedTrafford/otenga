@@ -1,6 +1,6 @@
 # ⚡ Otenga — Python-Native Business Intelligence Platform
 
-> A collaborative BI platform where data creators write SQL, transform with Python/Pandas, and publish interactive dashboards — built for **Aleza Credit**.
+> A collaborative BI platform where data creators write SQL, transform with Python/Pandas, and publish interactive dashboards 
 
 ## ✨ Features
 
